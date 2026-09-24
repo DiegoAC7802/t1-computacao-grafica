@@ -151,8 +151,8 @@ public class Objeto3D {
 
 		Mat4x4 matrizFinal =
 			modelviewGlobal.multiplicaMatrizes(
-				modelview,
-				modelviewGlobal
+				modelviewGlobal,
+				modelview
 			);
 
 

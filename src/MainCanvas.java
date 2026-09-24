@@ -7,10 +7,12 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import javax.swing.JPanel;
 
 import core3d.Mat4x4;
+import core3d.Triangulo3D;
 
 public class MainCanvas extends JPanel implements Runnable {
 
@@ -41,11 +43,14 @@ public class MainCanvas extends JPanel implements Runnable {
 
 	// VELOCIDADE
 
-	float velocidade = 50.0f;
+	float velocidade = 320.0f;
+	float cameraX = 0;
+	float cameraZ = 0;
+	float cameraYaw = 0;
 
 	// OBJETO 3D
 
-	Objeto3D objeto;
+	ArrayList<Objeto3D> objetos = new ArrayList<>();
 
 	// MATRIZ DA CÂMERA / CENA
 
@@ -61,6 +66,7 @@ public class MainCanvas extends JPanel implements Runnable {
 
 		setSize(W, H);
 		setFocusable(true);
+		Triangulo3D.defineAlturaViewport(H);
 
 		// Matriz ModelView
 
@@ -72,17 +78,15 @@ public class MainCanvas extends JPanel implements Runnable {
 		projecao = new Mat4x4();
 		projecao.setParalelProjection();
 
-		// CARREGAMENTO DO OBJETO
+		// CARREGAMENTO DA CENA
 
 		try {
-
-			objeto =
-				new Objeto3D(
-					"obj\\medieval house.obj"
-				);
-
+			adicionaObjeto("obj/medieval house.obj", 0.60f, -20, 0, 10);
+			adicionaObjeto("obj/tank.obj", 0.12f, 30, 0, -25);
+			adicionaObjeto("obj/uploads_files_2787791_Mercedes+Benz+GLS+580.obj", 2.8f, 55, 0, 15);
+			adicionaObjeto("obj/chair_01.obj", 18.0f, 10, 0, 35);
+			adicionaObjeto("obj/SR71.obj", 0.42f, -50, 20, -70);
 		} catch (IOException e) {
-
 			e.printStackTrace();
 		}
 
@@ -100,13 +104,8 @@ public class MainCanvas extends JPanel implements Runnable {
 
 				int key = e.getKeyCode();
 
-				if (key == KeyEvent.VK_S) {
-					UP = false;
-				}
-
-				if (key == KeyEvent.VK_W) {
-					DOWN = false;
-				}
+				if (key == KeyEvent.VK_W) UP = false;
+				if (key == KeyEvent.VK_S) DOWN = false;
 
 				if (key == KeyEvent.VK_A) {
 					LEFT = false;
@@ -124,13 +123,8 @@ public class MainCanvas extends JPanel implements Runnable {
 
 				// MOVIMENTAÇÃO
 
-				if (key == KeyEvent.VK_S) {
-					UP = true;
-				}
-
-				if (key == KeyEvent.VK_W) {
-					DOWN = true;
-				}
+				if (key == KeyEvent.VK_W) UP = true;
+				if (key == KeyEvent.VK_S) DOWN = true;
 
 				if (key == KeyEvent.VK_A) {
 					LEFT = true;
@@ -140,109 +134,8 @@ public class MainCanvas extends JPanel implements Runnable {
 					RIGHT = true;
 				}
 
-				// ESCALA -
-
-				if (key == KeyEvent.VK_Z) {
-
-					Mat4x4 matrot =
-						new Mat4x4();
-
-					matrot.setSacale(
-						0.8f,
-						0.8f,
-						0.8f
-					);
-
-					modelview =
-						modelview.multiplicaMatrizes(
-							matrot,
-							modelview
-						);
-				}
-
-				// ESCALA +
-
-				if (key == KeyEvent.VK_X) {
-
-					Mat4x4 matrot =
-						new Mat4x4();
-
-					matrot.setSacale(
-						1.2f,
-						1.2f,
-						1.2f
-					);
-
-					modelview =
-						modelview.multiplicaMatrizes(
-							matrot,
-							modelview
-						);
-				}
-
-				// ROTAÇÃO PARA ESQUERDA
-
-				if (key == KeyEvent.VK_Q) {
-
-					Mat4x4 matrot =
-						new Mat4x4();
-
-					matrot.setRotateY(-5);
-
-					modelview =
-						modelview.multiplicaMatrizes(
-							matrot,
-							modelview
-						);
-				}
-
-				// ROTAÇÃO PARA DIREITA
-
-				if (key == KeyEvent.VK_E) {
-
-					Mat4x4 matrot =
-						new Mat4x4();
-
-					matrot.setRotateY(+5);
-
-					modelview =
-						modelview.multiplicaMatrizes(
-							matrot,
-							modelview
-						);
-				}
-
-				// ROTAÇÃO PARA CIMA
-
-				if (key == KeyEvent.VK_O) {
-
-					Mat4x4 matrot =
-						new Mat4x4();
-
-					matrot.setRotateX(-5);
-
-					modelview =
-						modelview.multiplicaMatrizes(
-							matrot,
-							modelview
-						);
-				}
-
-				// ROTAÇÃO PARA BAIXO
-
-				if (key == KeyEvent.VK_P) {
-
-					Mat4x4 matrot =
-						new Mat4x4();
-
-					matrot.setRotateX(+5);
-
-					modelview =
-						modelview.multiplicaMatrizes(
-							matrot,
-							modelview
-						);
-				}
+				if (key == KeyEvent.VK_Q) cameraYaw -= 5;
+				if (key == KeyEvent.VK_E) cameraYaw += 5;
 
 				// PROJEÇÃO PARALELA
 
@@ -298,62 +191,41 @@ public class MainCanvas extends JPanel implements Runnable {
 	// SIMULAÇÃO DO MUNDO
 
 	public void simulaMundo(long diftime) {
+		float movimento = velocidade * diftime / 1000.0f;
+		float frente = (UP ? 1 : 0) - (DOWN ? 1 : 0);
+		float lateral = (RIGHT ? 1 : 0) - (LEFT ? 1 : 0);
+		float rad = (float) Math.toRadians(cameraYaw);
 
-		// MOVIMENTAÇÃO
+		cameraX += (float) ((Math.cos(rad) * lateral) + (Math.sin(rad) * frente)) * movimento;
+		cameraZ += (float) ((Math.sin(rad) * lateral) - (Math.cos(rad) * frente)) * movimento;
+		atualizaCamera();
+	}
 
-		if (UP || DOWN || LEFT || RIGHT) {
+	private void adicionaObjeto(String caminho, float escala, float x, float y, float z)
+			throws IOException {
+		Objeto3D novo = new Objeto3D(caminho);
+		novo.escala(escala, escala, escala);
+		novo.translacao(x, y, z);
+		objetos.add(novo);
+	}
 
-			float difS =
-				diftime / 1000.0f;
+	private void atualizaCamera() {
+		Mat4x4 camera = new Mat4x4();
+		camera.setIdentity();
 
-			float movimento =
-				velocidade * difS;
+		Mat4x4 rotacao = new Mat4x4();
+		rotacao.setRotateY(-cameraYaw);
+		camera = camera.multiplicaMatrizes(camera, rotacao);
 
-			Mat4x4 matrot =
-				new Mat4x4();
+		Mat4x4 translacao = new Mat4x4();
+		translacao.setTranslate(-cameraX, 0, -cameraZ);
+		camera = camera.multiplicaMatrizes(camera, translacao);
 
-			if (UP) {
+		Mat4x4 centraliza = new Mat4x4();
+		centraliza.setTranslate(W / 2.0f, H / 2.0f, 0);
+		camera = camera.multiplicaMatrizes(camera, centraliza);
 
-				matrot.setTranslate(
-					0,
-					-movimento,
-					0
-				);
-			}
-
-			if (DOWN) {
-
-				matrot.setTranslate(
-					0,
-					movimento,
-					0
-				);
-			}
-
-			if (LEFT) {
-
-				matrot.setTranslate(
-					-movimento,
-					0,
-					0
-				);
-			}
-
-			if (RIGHT) {
-
-				matrot.setTranslate(
-					movimento,
-					0,
-					0
-				);
-			}
-
-			modelview =
-				modelview.multiplicaMatrizes(
-					matrot,
-					modelview
-				);
-		}
+		modelview = camera;
 	}
 
 
@@ -380,13 +252,8 @@ public class MainCanvas extends JPanel implements Runnable {
 
 		g.setColor(Color.black);
 
-		if (objeto != null) {
-
-			objeto.desenha(
-				(Graphics2D) g,
-				modelview,
-				projecao
-			);
+		for (Objeto3D objeto : objetos) {
+			objeto.desenha((Graphics2D) g, modelview, projecao);
 		}
 
 

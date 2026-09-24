@@ -3,6 +3,12 @@ package core3d;
 import java.awt.Graphics2D;
 
 public class Triangulo3D {
+	private static int alturaViewport = 1080;
+
+	public static void defineAlturaViewport(int altura) {
+		alturaViewport = altura;
+	}
+
 	Ponto3D pa;
 	Ponto3D pb;
 	Ponto3D pc;
@@ -31,9 +37,9 @@ public class Triangulo3D {
 	
 		// CONVERSÃO DO EIXO Y PARA A TELA
 		
-		pa2.y = 480 - pa2.y;
-		pb2.y = 480 - pb2.y;
-		pc2.y = 480 - pc2.y;
+		pa2.y = alturaViewport / 2.0f - pa2.y;
+		pb2.y = alturaViewport / 2.0f - pb2.y;
+		pc2.y = alturaViewport / 2.0f - pc2.y;
 		
 		dbg.drawLine(
 			(int)pa2.x,
